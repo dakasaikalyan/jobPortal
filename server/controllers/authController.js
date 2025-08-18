@@ -80,8 +80,9 @@ exports.login = async (req, res) => {
       })
     }
 
-    const { email, password } = req.body
-
+    const { email, password, userType } = req.body
+    console.log("Login attempt:", { email, userType })
+    
     // Find user and include password
     const user = await User.findOne({ email }).select("+password")
     if (!user) {
@@ -89,6 +90,12 @@ exports.login = async (req, res) => {
         success: false,
         message: "Invalid credentials",
       })
+    }
+
+    // Check if userType matches the user's role (optional validation)
+    if (userType && userType !== user.role) {
+      console.log(`User type mismatch: expected ${userType}, got ${user.role}`)
+      // Don't block login, just log the mismatch
     }
 
     // Check password

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useToast } from "@/components/ui/toast-context"
+import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -554,14 +555,14 @@ export default function EmployerDashboard() {
                   <div key={job._id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-semibold text-lg">{job.title}</h3>
-                      <Badge variant="secondary">{job.applicantsCount || 0} applicants</Badge>
+                      <Badge variant="secondary">{job?.applicantsCount || 0} applicants</Badge>
                     </div>
                     <div className="text-gray-600 mb-3">
                       {typeof job.company === 'string' ? job.company : job.company?.name} - {
                         typeof job.location === 'string'
                           ? job.location
                           : job.location && typeof job.location === 'object'
-                            ? (job.location.remote ? 'Remote' : Object.entries(job.location).map(([k, v]) => `${k}: ${v}`).join(', '))
+                            ? (job?.location?.remote ? 'Remote' : Object.entries(job.location).map(([k, v]) => `${k}: ${v}`).join(', '))
                             : ''
                       }
                     </div>

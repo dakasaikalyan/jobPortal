@@ -23,6 +23,18 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Client-side validation
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match!")
+      return
+    }
+    
+    if (formData.password.length < 6) {
+      alert("Password must be at least 6 characters long!")
+      return
+    }
+    
     setIsLoading(true)
     try {
       // Prepare payload for backend
@@ -33,21 +45,29 @@ export default function RegisterPage() {
         password: formData.password,
         role: formData.userType,
       }
+      
+      console.log("Sending registration request:", payload)
+      
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
+      
       const data = await res.json()
+      console.log("Registration response:", data)
+      
       if (!res.ok) {
         alert(data.message || "Registration failed")
         setIsLoading(false)
         return
       }
+      
       // Registration successful
       alert("Account created successfully! Please sign in.")
       window.location.href = "/auth/login"
     } catch (err) {
+      console.error("Registration error:", err)
       alert("Network error. Please try again.")
     } finally {
       setIsLoading(false)

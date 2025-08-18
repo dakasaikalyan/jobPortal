@@ -6,7 +6,11 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "start:full": "node start-dev.js",
+    "start:backend": "cd server && node start-server.js",
+    "start:frontend": "next dev",
+    "test:backend": "node test-backend.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
