@@ -4,6 +4,7 @@ const { validationResult } = require("express-validator")
 
 // Generate JWT Token
 const generateToken = (userId) => {
+  console.log( process.env.JWT_SECRET,userId,process.env.JWT_EXPIRE,"process.env.JWT_EXPIREprocess.env.JWT_EXPIRE")
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || "7d",
   })
