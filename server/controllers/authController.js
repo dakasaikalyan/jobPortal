@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken")
 const User = require("../models/User")
 const { validationResult } = require("express-validator")
+const crypto = require("crypto")
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -160,6 +161,64 @@ exports.logout = (req, res) => {
     success: true,
     message: "Logged out successfully",
   })
+}
+
+// Forgot Password - generate reset token
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body
+    const user = await User.findOne({ email })
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" })
+    }
+
+    const resetToken = crypto.randomBytes(20).toString("hex")
+    const resetTokenHash = crypto.createHash("sha256").update(resetToken).digest("hex")
+    user.resetPasswordToken = resetTokenHash
+    user.resetPasswordExpire = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
+    await user.save()
+
+    // In production: email the reset link containing token. For now, return token for testing/dev
+    res.json({
+      success: true,
+      message: "Password reset token generated",
+      token: resetToken,
+      expiresInMinutes: 15,
+    })
+  } catch (error) {
+    console.error("Forgot password error:", error)
+    res.status(500).json({ success: false, message: "Server error" })
+  }
+}
+
+// Reset Password - verify token and set new password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: "Token and new password are required" })
+    }
+
+    const resetTokenHash = crypto.createHash("sha256").update(token).digest("hex")
+    const user = await User.findOne({
+      resetPasswordToken: resetTokenHash,
+      resetPasswordExpire: { $gt: new Date() },
+    }).select("+password")
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Invalid or expired token" })
+    }
+
+    user.password = password
+    user.resetPasswordToken = undefined
+    user.resetPasswordExpire = undefined
+    await user.save()
+
+    res.json({ success: true, message: "Password reset successful" })
+  } catch (error) {
+    console.error("Reset password error:", error)
+    res.status(500).json({ success: false, message: "Server error" })
+  }
 }
 
 // Send OTP for login

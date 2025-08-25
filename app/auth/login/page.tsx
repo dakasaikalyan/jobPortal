@@ -60,27 +60,88 @@ export default function LoginPage() {
   const handleOtpLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    // TODO: Implement OTP login
-    setTimeout(() => setIsLoading(false), 2000)
+    setError("")
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.message || "Invalid OTP")
+        return
+      }
+      login(data.user, data.token)
+      router.push("/dashboard")
+    } catch {
+      setError("Network error. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleGoogleLogin = async () => {
     setIsLoading(true)
-    // TODO: Implement Google OAuth
-    setTimeout(() => setIsLoading(false), 2000)
+    setError("")
+    try {
+      // Minimal email-only mock; in production use OAuth SDK
+      const emailPrompt = typeof window !== "undefined" ? window.prompt("Enter Google account email for dev login") : ""
+      if (!emailPrompt) { setIsLoading(false); return }
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailPrompt, googleId: `mock-${Date.now()}`, firstName: "Google", lastName: "User" }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.message || "Google login failed"); return }
+      login(data.user, data.token)
+      router.push("/dashboard")
+    } catch {
+      setError("Network error. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleFacebookLogin = async () => {
     setIsLoading(true)
-    // TODO: Implement Facebook OAuth
-    setTimeout(() => setIsLoading(false), 2000)
+    setError("")
+    try {
+      const emailPrompt = typeof window !== "undefined" ? window.prompt("Enter Facebook account email for dev login") : ""
+      if (!emailPrompt) { setIsLoading(false); return }
+      const res = await fetch("/api/auth/facebook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailPrompt, facebookId: `mock-${Date.now()}`, firstName: "Facebook", lastName: "User" }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.message || "Facebook login failed"); return }
+      login(data.user, data.token)
+      router.push("/dashboard")
+    } catch {
+      setError("Network error. Please try again.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const sendOtp = async () => {
     if (!email) return
     setIsLoading(true)
-    // TODO: Implement OTP sending
-    setTimeout(() => setIsLoading(false), 1000)
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.message || "Failed to send OTP")
+      }
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -304,6 +365,7 @@ export default function LoginPage() {
               <Link href="/auth/forgot-password" className="text-sm text-gray-600 hover:text-gray-700">
                 Forgot your password?
               </Link>
+              <div className="text-xs text-gray-500">Need a token? After requesting reset, check the Forgot Password page.</div>
             </div>
           </CardContent>
         </Card>

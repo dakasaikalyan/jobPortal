@@ -109,6 +109,8 @@ const userSchema = new mongoose.Schema(
     otpExpiry: Date,
     googleId: String,
     facebookId: String,
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
   },
   {
     timestamps: true,

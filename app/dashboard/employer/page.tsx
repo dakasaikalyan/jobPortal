@@ -20,9 +20,9 @@ const experienceLevels = ["entry-level", "mid-level", "senior-level", "executive
 interface Job {
   _id: string
   title: string
-  company: string
-  location: string
-  applicantsCount: number
+  company: any
+  location: any
+  applicantsCount?: number
 }
 
 interface Company {
@@ -91,7 +91,7 @@ export default function EmployerDashboard() {
       })
       const data = await res.json()
       if (res.ok && Array.isArray(data.data)) {
-        const myCompany = data.data.find((c: any) => c.owner && c.owner._id === user.id)
+        const myCompany = data.data.find((c: any) => c.owner && c.owner._id === user?.id)
         setCompany(myCompany || null)
         if (myCompany) {
           setCompanyForm({
@@ -174,7 +174,7 @@ export default function EmployerDashboard() {
     const data = await res.json()
     // Filter jobs posted by the current employer
     const myJobs = Array.isArray(data.data)
-      ? data.data.filter((job: any) => job.postedBy && job.postedBy._id === user.id)
+      ? data.data.filter((job: any) => job.postedBy && job.postedBy._id === user?.id)
       : []
     setJobs(myJobs)
     setLoading(false)
@@ -306,7 +306,7 @@ export default function EmployerDashboard() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
       >
-        <h1 className="text-3xl font-bold mb-6">Welcome, {user?.firstName}! (Employer Dashboard)</h1>
+        <h1 className="text-3xl font-bold mb-6">Welcome, {user?.firstName || ""}! (Employer Dashboard)</h1>
         {/* Company Profile Section */}
         <Card className="mb-8">
           <CardHeader>
@@ -439,23 +439,19 @@ export default function EmployerDashboard() {
                 ))}
               </ul>
             )}
-            <Button className="mt-6" onClick={() => setShowForm(true)}>Post New Job</Button>
+            <div className="mt-6 sticky bottom-4 z-[40]">
+              <Button onClick={() => setShowForm(true)}>Post New Job</Button>
+            </div>
             {/* Job Posting Modal/Form */}
             {showForm && (
-              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
                 <Card className="flex w-full max-w-3xl p-0 overflow-hidden relative">
                   <button className="absolute top-2 right-2 text-gray-500 z-10" onClick={() => setShowForm(false)}>&times;</button>
                   {/* Live Preview */}
                   <div className="w-1/2 bg-gradient-to-br from-green-100 to-blue-100 flex flex-col items-center justify-center p-8 border-r">
                     <div className="font-bold text-xl mb-1">{form.title || "Job Title"}</div>
                     <div className="text-green-700 mb-1">
-                      {typeof form.company === 'string' ? form.company : form.company?.name || company?.name || "Company"} - {
-                        typeof form.location === 'string'
-                          ? form.location
-                          : form.location && typeof form.location === 'object'
-                            ? (form.location.remote ? 'Remote' : Object.entries(form.location).map(([k, v]) => `${k}: ${v}`).join(', '))
-                            : ''
-                      }
+                      {company?.name || "Company"} - {typeof form.location === 'string' ? form.location : ''}
                     </div>
                     <div className="text-gray-600 mb-1">{form.jobType} | {form.experienceLevel}</div>
                     <div className="text-gray-700 text-sm mt-2 line-clamp-5">{form.description || "Job description will appear here."}</div>
@@ -484,7 +480,11 @@ export default function EmployerDashboard() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             {/* TagInput for requirements */}
-                            <TagInput value={typeof form.requirements === 'string' ? form.requirements.split(",").map(s => s.trim()).filter(Boolean) : []} onChange={tags => handleFormChange({ target: { name: "requirements", value: tags.join(", ") } })} placeholder="Add requirements and press Enter" />
+                            <TagInput
+                              value={typeof form.requirements === 'string' ? form.requirements.split(",").map(s => s.trim()).filter(Boolean) : []}
+                              onChange={tags => setForm(prev => ({ ...prev, requirements: tags.join(", ") }))}
+                              placeholder="Add requirements and press Enter"
+                            />
                           </TooltipTrigger>
                           <TooltipContent>List job requirements (press Enter after each).</TooltipContent>
                         </Tooltip>
