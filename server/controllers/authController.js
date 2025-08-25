@@ -234,8 +234,8 @@ exports.sendOTP = async (req, res) => {
       })
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    // Static OTP for testing
+    const otp = "123456"
     
     // Store OTP in user document (in production, use Redis or similar)
     user.otp = otp
@@ -247,7 +247,8 @@ exports.sendOTP = async (req, res) => {
 
     res.json({
       success: true,
-      message: "OTP sent successfully",
+      message: "OTP sent successfully (use 123456)",
+      otp: process.env.NODE_ENV !== 'production' ? otp : undefined
     })
   } catch (error) {
     console.error("Send OTP error:", error)
@@ -263,11 +264,17 @@ exports.verifyOTP = async (req, res) => {
   try {
     const { email, otp } = req.body
 
-    const user = await User.findOne({ 
-      email, 
-      otp, 
-      otpExpiry: { $gt: new Date() } 
-    })
+    // Allow static OTP 123456 for testing; also accept stored OTP if present
+    const query = { email }
+    let user = await User.findOne(query)
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP" })
+    }
+    const isStatic = otp === "123456"
+    const isStoredValid = user.otp === otp && user.otpExpiry && user.otpExpiry > new Date()
+    if (!isStatic && !isStoredValid) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP" })
+    }
 
     if (!user) {
       return res.status(400).json({

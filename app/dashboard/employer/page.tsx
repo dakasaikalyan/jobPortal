@@ -443,9 +443,9 @@ export default function EmployerDashboard() {
               <Button onClick={() => setShowForm(true)}>Post New Job</Button>
             </div>
             {/* Job Posting Modal/Form */}
-            {showForm && (
-              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
-                <Card className="flex w-full max-w-3xl p-0 overflow-hidden relative">
+            {showForm && typeof window !== "undefined" && ReactDOM.createPortal(
+              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999]">
+                <Card className="flex w-full max-w-3xl p-0 overflow-hidden relative z-[10000] pointer-events-auto">
                   <button className="absolute top-2 right-2 text-gray-500 z-10" onClick={() => setShowForm(false)}>&times;</button>
                   {/* Live Preview */}
                   <div className="w-1/2 bg-gradient-to-br from-green-100 to-blue-100 flex flex-col items-center justify-center p-8 border-r">
@@ -534,7 +534,8 @@ export default function EmployerDashboard() {
                     </Button>
                   </form>
                 </Card>
-              </div>
+              </div>,
+              document.body
             )}
           </CardContent>
         </Card>

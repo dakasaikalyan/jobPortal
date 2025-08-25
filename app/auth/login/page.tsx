@@ -278,18 +278,13 @@ export default function LoginPage() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">OTP Code</label>
-                    <InputOTP
-                      value={otp}
-                      onChange={setOtp}
-                      maxLength={6}
-                      render={({ slots }) => (
-                        <InputOTPGroup>
-                          {slots.map((slot, index) => (
-                            <InputOTPSlot key={index} {...slot} />
-                          ))}
-                        </InputOTPGroup>
-                      )}
-                    />
+                    <InputOTP value={otp} onChange={setOtp} maxLength={6}>
+                      <InputOTPGroup>
+                        {Array.from({ length: 6 }).map((_, index) => (
+                          <InputOTPSlot key={index} index={index} />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
                   </div>
 
                   <div className="flex gap-2">

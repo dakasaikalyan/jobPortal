@@ -50,10 +50,12 @@ export default function JobApplicationsPage() {
 
   useEffect(() => {
     if (params.jobId) {
-      fetchApplications()
       fetchJobDetails()
+      if (token) {
+        fetchApplications()
+      }
     }
-  }, [params.jobId])
+  }, [params.jobId, token])
 
   const fetchApplications = async () => {
     if (!token) return
