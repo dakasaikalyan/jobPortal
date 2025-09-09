@@ -29,6 +29,22 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    
+    // Enhanced email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email || !emailRegex.test(email)) {
+      setError("Please enter a valid email address")
+      setIsLoading(false)
+      return
+    }
+    
+    // Role validation
+    if (!userType) {
+      setError("Please select a user type")
+      setIsLoading(false)
+      return
+    }
+    
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -41,6 +57,14 @@ export default function LoginPage() {
         setIsLoading(false)
         return
       }
+      
+      // Enhanced role validation - check if user's actual role matches selected role
+      if (data.user.role !== userType) {
+        setError(`Invalid role selection. Your account is registered as ${data.user.role}. Please select the correct role.`)
+        setIsLoading(false)
+        return
+      }
+      
       login(data.user, data.token)
       // Redirect based on role
       if (data.user.role === "employer") {

@@ -1,6 +1,7 @@
 const Job = require("../models/Job")
 const Company = require("../models/Company")
 const { validationResult } = require("express-validator")
+const smsService = require("../services/smsService")
 
 // Get all jobs with filtering and pagination
 exports.getJobs = async (req, res) => {
@@ -19,7 +20,7 @@ exports.getJobs = async (req, res) => {
     } = req.query
 
     // Build query
-    const query = { status: "active" }
+    const query = { status: "active", approvalStatus: "approved" }
 
     // Text search
     if (search) {
@@ -29,9 +30,9 @@ exports.getJobs = async (req, res) => {
     // Location filter
     if (location) {
       query.$or = [
-        { "location.city": new RegExp(location, "i") },
-        { "location.state": new RegExp(location, "i") },
-        { "location.country": new RegExp(location, "i") },
+        { "locations.city": new RegExp(location, "i") },
+        { "locations.state": new RegExp(location, "i") },
+        { "locations.country": new RegExp(location, "i") },
       ]
     }
 
@@ -54,7 +55,7 @@ exports.getJobs = async (req, res) => {
 
     // Remote work filter
     if (remote === "true") {
-      query["location.remote"] = true
+      query["locations.remote"] = true
     }
 
     // Featured jobs filter
@@ -299,6 +300,118 @@ exports.updateStatus = async (req, res) => {
     })
   } catch (error) {
     console.error("Update job status error:", error)
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    })
+  }
+}
+
+// Approve job (admin only)
+exports.approveJob = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id).populate("postedBy", "firstName lastName email profile.phone")
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      })
+    }
+
+    job.approvalStatus = "approved"
+    job.approvedBy = req.user.id
+    job.approvedAt = new Date()
+    job.status = "active"
+    await job.save()
+
+    // Send notification to employer
+    if (job.postedBy.profile?.phone) {
+      await smsService.sendJobApplicationNotification(
+        job.postedBy.profile.phone,
+        job.title,
+        "Your company"
+      )
+    }
+
+    res.json({
+      success: true,
+      message: "Job approved successfully",
+      data: job,
+    })
+  } catch (error) {
+    console.error("Approve job error:", error)
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    })
+  }
+}
+
+// Reject job (admin only)
+exports.rejectJob = async (req, res) => {
+  try {
+    const { rejectionReason } = req.body
+    const job = await Job.findById(req.params.id).populate("postedBy", "firstName lastName email profile.phone")
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      })
+    }
+
+    job.approvalStatus = "rejected"
+    job.approvedBy = req.user.id
+    job.approvedAt = new Date()
+    job.rejectionReason = rejectionReason
+    job.status = "closed"
+    await job.save()
+
+    res.json({
+      success: true,
+      message: "Job rejected successfully",
+      data: job,
+    })
+  } catch (error) {
+    console.error("Reject job error:", error)
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    })
+  }
+}
+
+// Get pending jobs (admin only)
+exports.getPendingJobs = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search } = req.query
+
+    const query = { approvalStatus: "pending" }
+    if (search) {
+      query.$text = { $search: search }
+    }
+
+    const jobs = await Job.find(query)
+      .populate("company", "name logo industry")
+      .populate("postedBy", "firstName lastName email")
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+
+    const total = await Job.countDocuments(query)
+
+    res.json({
+      success: true,
+      data: jobs,
+      pagination: {
+        current: page,
+        pages: Math.ceil(total / limit),
+        total,
+      },
+    })
+  } catch (error) {
+    console.error("Get pending jobs error:", error)
     res.status(500).json({
       success: false,
       message: "Server error",

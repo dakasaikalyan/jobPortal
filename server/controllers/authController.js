@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken")
 const User = require("../models/User")
 const { validationResult } = require("express-validator")
 const crypto = require("crypto")
+const smsService = require("../services/smsService")
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -93,10 +94,12 @@ exports.login = async (req, res) => {
       })
     }
 
-    // Check if userType matches the user's role (optional validation)
+    // Check if userType matches the user's role (strict validation)
     if (userType && userType !== user.role) {
-      console.log(`User type mismatch: expected ${userType}, got ${user.role}`)
-      // Don't block login, just log the mismatch
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role selection. Your account is registered as ${user.role}. Please select the correct role.`,
+      })
     }
 
     // Check password
@@ -223,7 +226,7 @@ exports.resetPassword = async (req, res) => {
 // Send OTP for login
 exports.sendOTP = async (req, res) => {
   try {
-    const { email } = req.body
+    const { email, phoneNumber } = req.body
 
     const user = await User.findOne({ email })
     if (!user) {
@@ -233,20 +236,30 @@ exports.sendOTP = async (req, res) => {
       })
     }
 
-    // Static OTP for testing
-    const otp = "123456"
+    // Generate random OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
     
-    // Store OTP in user document (in production, use Redis or similar)
+    // Store OTP in user document
     user.otp = otp
     user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
     await user.save()
 
-    // In production, send OTP via email/SMS
-    console.log(`OTP for ${email}: ${otp}`)
+    // Send OTP via SMS if phone number provided
+    if (phoneNumber) {
+      const smsResult = await smsService.sendOTP(phoneNumber, otp)
+      if (!smsResult.success) {
+        console.error("SMS sending failed:", smsResult.error)
+      }
+    }
+
+    // In development, also log the OTP
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`OTP for ${email}: ${otp}`)
+    }
 
     res.json({
       success: true,
-      message: "OTP sent successfully (use 123456)",
+      message: phoneNumber ? "OTP sent via SMS" : "OTP generated (check console in development)",
       otp: process.env.NODE_ENV !== 'production' ? otp : undefined
     })
   } catch (error) {

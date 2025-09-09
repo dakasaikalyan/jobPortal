@@ -28,7 +28,7 @@ const jobSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    location: {
+    locations: [{
       city: String,
       state: String,
       country: String,
@@ -36,7 +36,7 @@ const jobSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
-    },
+    }],
     salary: {
       min: Number,
       max: Number,
@@ -57,7 +57,10 @@ const jobSchema = new mongoose.Schema(
     },
     experienceLevel: {
       type: String,
-      enum: ["entry-level", "mid-level", "senior-level", "executive"],
+      required: true,
+    },
+    experienceLevelText: {
+      type: String,
       required: true,
     },
     skills: [String],
@@ -66,8 +69,19 @@ const jobSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["active", "paused", "closed", "draft"],
-      default: "active",
+      default: "draft",
     },
+    approvalStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    approvedAt: Date,
+    rejectionReason: String,
     featured: {
       type: Boolean,
       default: false,

@@ -31,5 +31,8 @@ router.delete("/:id", authorize("employer", "admin"), jobController.deleteJob)
 // Admin only
 router.patch("/:id/feature", authorize("admin"), jobController.toggleFeatured)
 router.patch("/:id/status", authorize("admin"), jobController.updateStatus)
+router.patch("/:id/approve", authorize("admin"), jobController.approveJob)
+router.patch("/:id/reject", authorize("admin"), jobController.rejectJob)
+router.get("/pending", authorize("admin"), jobController.getPendingJobs)
 
 module.exports = router 
