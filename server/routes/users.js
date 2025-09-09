@@ -7,13 +7,13 @@ const router = express.Router()
 
 // Validation middleware
 const profileValidation = [
-  body("profile.title").optional().trim().isLength({ max: 100 }).withMessage("Title cannot exceed 100 characters"),
-  body("profile.summary").optional().trim().isLength({ max: 1000 }).withMessage("Summary cannot exceed 1000 characters"),
-  body("profile.phone").optional().matches(/^\+?[\d\s\-\(\)]+$/).withMessage("Please enter a valid phone number"),
-  body("profile.website").optional().isURL().withMessage("Please enter a valid website URL"),
-  body("profile.linkedin").optional().isURL().withMessage("Please enter a valid LinkedIn URL"),
-  body("profile.github").optional().isURL().withMessage("Please enter a valid GitHub URL"),
-  body("profile.youtube").optional().isURL().withMessage("Please enter a valid YouTube URL"),
+  body("profile.title").optional({ checkFalsy: true, nullable: true }).trim().isLength({ max: 100 }).withMessage("Title cannot exceed 100 characters"),
+  body("profile.summary").optional({ checkFalsy: true, nullable: true }).trim().isLength({ max: 1000 }).withMessage("Summary cannot exceed 1000 characters"),
+  body("profile.phone").optional({ checkFalsy: true, nullable: true }).matches(/^\+?[\d\s\-\(\)]+$/).withMessage("Please enter a valid phone number"),
+  body("profile.website").optional({ checkFalsy: true, nullable: true }).isURL().withMessage("Please enter a valid website URL"),
+  body("profile.linkedin").optional({ checkFalsy: true, nullable: true }).isURL().withMessage("Please enter a valid LinkedIn URL"),
+  body("profile.github").optional({ checkFalsy: true, nullable: true }).isURL().withMessage("Please enter a valid GitHub URL"),
+  body("profile.youtube").optional({ checkFalsy: true, nullable: true }).isURL().withMessage("Please enter a valid YouTube URL"),
 ]
 
 // All routes are protected

@@ -14,7 +14,6 @@ const companySchema = new mongoose.Schema(
     },
     website: {
       type: String,
-      match: [/^https?:\/\/.+/, "Please enter a valid website URL"],
     },
     logo: {
       filename: String,

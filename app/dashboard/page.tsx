@@ -33,11 +33,19 @@ export default function DashboardPage() {
     const fetchApplications = async () => {
       if (!token) return
       setLoading(true)
-      const res = await fetch("/api/applications/my", {
+      const res = await fetch("/api/applications/my-applications", {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      setApplications(data.applications || [])
+      const normalized = (data.data || []).map((a: any) => ({
+        _id: a._id,
+        company: a.job?.company?.name || a.job?.company || "",
+        position: a.job?.title || "",
+        status: a.status || "Application Sent",
+        appliedDate: new Date(a.createdAt).toLocaleDateString(),
+        logo: a.job?.logo,
+      }))
+      setApplications(normalized)
       setLoading(false)
     }
     fetchApplications()

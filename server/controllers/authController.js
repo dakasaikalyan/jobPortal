@@ -5,7 +5,6 @@ const crypto = require("crypto")
 
 // Generate JWT Token
 const generateToken = (userId) => {
-  console.log( process.env.JWT_SECRET,userId,process.env.JWT_EXPIRE,"process.env.JWT_EXPIREprocess.env.JWT_EXPIRE")
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || "7d",
   })
@@ -328,10 +327,7 @@ exports.googleAuth = async (req, res) => {
         email,
         googleId,
         emailVerified: true,
-        profile: {
-          ...user?.profile,
-          profilePicture,
-        },
+        profile: profilePicture ? { profilePicture } : undefined,
       })
       await user.save()
     } else {
@@ -340,10 +336,7 @@ exports.googleAuth = async (req, res) => {
       user.emailVerified = true
       user.lastLogin = new Date()
       if (profilePicture) {
-        user.profile = {
-          ...user.profile,
-          profilePicture,
-        }
+        user.profile = { ...(user.profile || {}), profilePicture }
       }
       await user.save()
     }
@@ -386,10 +379,7 @@ exports.facebookAuth = async (req, res) => {
         email,
         facebookId,
         emailVerified: true,
-        profile: {
-          ...user?.profile,
-          profilePicture,
-        },
+        profile: profilePicture ? { profilePicture } : undefined,
       })
       await user.save()
     } else {
@@ -398,10 +388,7 @@ exports.facebookAuth = async (req, res) => {
       user.emailVerified = true
       user.lastLogin = new Date()
       if (profilePicture) {
-        user.profile = {
-          ...user.profile,
-          profilePicture,
-        }
+        user.profile = { ...(user.profile || {}), profilePicture }
       }
       await user.save()
     }

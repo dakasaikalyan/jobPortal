@@ -58,6 +58,10 @@ export default function ProfilePage() {
   const [showEduModal, setShowEduModal] = useState(false)
   const [eduEditIndex, setEduEditIndex] = useState<number | null>(null)
   const [eduForm, setEduForm] = useState<any>({ degree: "", field: "", institution: "", startDate: "", endDate: "", current: false })
+  const [skillInput, setSkillInput] = useState("")
+  const [locationQuery, setLocationQuery] = useState("")
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([])
+  const [phoneInput, setPhoneInput] = useState("")
 
   // Experience handlers
   const openAddExp = () => { setExpEditIndex(null); setExpForm({ position: "", company: "", startDate: "", endDate: "", current: false, description: "" }); setShowExpModal(true) }
@@ -115,6 +119,9 @@ export default function ProfilePage() {
           lastName: data.data.lastName,
           email: data.data.email,
         })
+        // Seed local controlled inputs
+        setPhoneInput(data.data.profile?.phone || "")
+        setLocationQuery(data.data.profile?.location?.city || "")
       } else {
         setError(data.message || "Failed to load profile.")
       }
@@ -125,27 +132,79 @@ export default function ProfilePage() {
     }
   }
 
+  // When entering edit mode, seed inputs from current profile state
+  useEffect(() => {
+    if (isEditing && profile) {
+      setPhoneInput(profile.phone || "")
+      setLocationQuery(profile.location?.city || "")
+    }
+    // eslint-disable-next-line
+  }, [isEditing])
+
+  // Simple client-side location autocomplete using a small list; can be replaced with Places API
+  useEffect(() => {
+    if (!locationQuery || locationQuery.length < 2) { setLocationSuggestions([]); return }
+    const cities = [
+      "Hyderabad", "bangalore", "Mumbai", "Delhi", "Pune", "Chennai", "Kolkata", "Ahmedabad", "Gurugram", "Noida",
+      "Remote"
+    ]
+    const q = locationQuery.toLowerCase()
+    setLocationSuggestions(cities.filter(c => c.toLowerCase().startsWith(q)).slice(0, 5))
+  }, [locationQuery])
+
   const handleSave = async () => {
     setIsLoading(true)
     setError("")
     setSuccess("")
     try {
-      let body: any = {}
-      if (isEmployer) {
-        // Only send basic info for employer
-        body = { profile: {} }
-      } else {
-        // Clean up experience/education: remove entries with empty required fields
-        const cleanExperience = (profile.experience || []).filter((exp: any) => exp.position && exp.company)
-        const cleanEducation = (profile.education || []).filter((edu: any) => edu.degree && edu.institution)
-        // Remove undefined location
-        let cleanProfile = { ...profile }
-        if (cleanProfile.location && (!cleanProfile.location.city && !cleanProfile.location.state)) {
-          delete cleanProfile.location
+      // Build payload deterministically from state
+      const cleanExperience = (profile.experience || []).filter((exp: any) => exp.position && exp.company)
+      const cleanEducation = (profile.education || []).filter((edu: any) => edu.degree && edu.institution)
+      const payloadProfile: any = {}
+      // Basic text fields
+      if (typeof profile.summary === 'string' && profile.summary.trim()) payloadProfile.summary = profile.summary.trim()
+      if (typeof profile.title === 'string' && profile.title.trim()) payloadProfile.title = profile.title.trim()
+      if (typeof profile.website === 'string' && profile.website.trim()) payloadProfile.website = profile.website.trim()
+      if (typeof profile.linkedin === 'string' && profile.linkedin.trim()) payloadProfile.linkedin = profile.linkedin.trim()
+      if (typeof profile.github === 'string' && profile.github.trim()) payloadProfile.github = profile.github.trim()
+      if (typeof profile.youtube === 'string' && profile.youtube.trim()) payloadProfile.youtube = profile.youtube.trim()
+      // Phone (prefer local input)
+      if (typeof phoneInput === 'string' && phoneInput.trim()) payloadProfile.phone = phoneInput.trim()
+      // Location (typed or selected)
+      const cityCandidate = locationQuery || (profile.location && profile.location.city)
+      if (cityCandidate && cityCandidate.trim()) {
+        payloadProfile.location = {
+          city: cityCandidate.trim(),
+          state: profile.location?.state,
+          country: profile.location?.country,
         }
-        cleanProfile = { ...cleanProfile, experience: cleanExperience, education: cleanEducation }
-        body = { profile: cleanProfile }
       }
+      // Visibility / freelancer
+      if (typeof profile.profileVisibility === 'string') payloadProfile.profileVisibility = profile.profileVisibility
+      if (typeof profile.isFreelancer === 'boolean') payloadProfile.isFreelancer = profile.isFreelancer
+      if (profile.isFreelancer && typeof profile.freelanceCompany === 'string' && profile.freelanceCompany.trim()) {
+        payloadProfile.freelanceCompany = profile.freelanceCompany.trim()
+      }
+      // Arrays
+      if (Array.isArray(profile.skills) && profile.skills.length > 0) payloadProfile.skills = profile.skills
+      if (cleanExperience.length > 0) payloadProfile.experience = cleanExperience
+      if (cleanEducation.length > 0) payloadProfile.education = cleanEducation
+
+      const body: any = { profile: payloadProfile }
+      // Visible confirmation that save is triggered and payload is built
+      try {
+        const previewPhone = payloadProfile.phone ? `phone=${payloadProfile.phone}` : "phone=\u2013"
+        const previewCity = payloadProfile.location?.city ? `city=${payloadProfile.location.city}` : "city=\u2013"
+        showToast(`Saving profile (${previewPhone}, ${previewCity})`, "info")
+        if (typeof window !== 'undefined') {
+          console.log('Profile save payload', body)
+        }
+      } catch {}
+      if (typeof window !== 'undefined') {
+        console.log('Profile save payload', body)
+      }
+
+      console.log(JSON.stringify(body),"JSON.stringify(body)")
       const res = await fetch("/api/users/profile", {
         method: "PUT",
         headers: {
@@ -279,7 +338,7 @@ export default function ProfilePage() {
                     <Avatar className="w-24 h-24">
                       <AvatarImage src="/placeholder-user.jpg" alt={profile?.firstName} />
                       <AvatarFallback className="text-2xl">
-                        {profile?.firstName[0]}{profile?.lastName[0]}
+                        {(profile?.firstName?.[0] || '').toString()}{(profile?.lastName?.[0] || '').toString()}
                       </AvatarFallback>
                     </Avatar>
                     {isEditing && (
@@ -309,11 +368,34 @@ export default function ProfilePage() {
                     </div>
                     <div className="flex items-center gap-3 text-sm">
                       <Phone className="w-4 h-4 text-gray-400" />
-                      <span>{profile?.phone}</span>
+                      {isEditing ? (
+                        <Input value={profile?.phone || ""} onChange={(e) => setProfile((p:any) => ({ ...(p || {}), phone: e.target.value }))} placeholder="Phone number" />
+                      ) : (
+                        <span>{profile?.phone}</span>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
+                    <div className="flex items-center gap-3 text-sm relative">
                       <MapPin className="w-4 h-4 text-gray-400" />
-                      <span>{profile?.location?.city}, {profile?.location?.state}</span>
+                      {isEditing ? (
+                        <div className="w-full">
+                          <Input
+                            value={locationQuery}
+                            onChange={(e) => setLocationQuery(e.target.value)}
+                            placeholder="City (type to search)"
+                          />
+                          {locationSuggestions.length > 0 && (
+                            <div className="absolute z-10 mt-1 bg-white border rounded shadow w-56 max-h-48 overflow-auto">
+                              {locationSuggestions.map((s) => (
+                                <button key={s} className="w-full text-left px-3 py-2 hover:bg-gray-100" onClick={() => { setProfile((p:any) => ({ ...p, location: { ...(p.location||{}), city: s } })); setLocationQuery(s); setLocationSuggestions([]) }}>
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span>{profile?.location?.city}{profile?.location?.state ? `, ${profile?.location?.state}` : ""}</span>
+                      )}
                     </div>
                   </div>
 
@@ -413,13 +495,30 @@ export default function ProfilePage() {
                       <CardTitle>Skills</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {profile?.skills?.map((skill: string, index: number) => (
-                          <Badge key={index} variant="secondary">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
+                      {isEditing ? (
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <Input value={skillInput} onChange={(e) => setSkillInput(e.target.value)} placeholder="Add a skill and press Add" />
+                            <Button type="button" onClick={() => { if (!skillInput.trim()) return; setProfile((p:any) => ({ ...p, skills: [...(p.skills||[]), skillInput.trim()] })); setSkillInput("") }}>Add</Button>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {profile?.skills?.map((skill: string, index: number) => (
+                              <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                                {skill}
+                                <button className="ml-1" onClick={() => setProfile((p:any) => ({ ...p, skills: (p.skills||[]).filter((_:any,i:number)=> i!==index) }))}>×</button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {profile?.skills?.map((skill: string, index: number) => (
+                            <Badge key={index} variant="secondary">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -474,8 +573,8 @@ export default function ProfilePage() {
                       <div className="space-y-3">
                         <Input placeholder="Position" value={expForm.position} onChange={e => setExpForm(f => ({ ...f, position: e.target.value }))} />
                         <Input placeholder="Company" value={expForm.company} onChange={e => setExpForm(f => ({ ...f, company: e.target.value }))} />
-                        <Input placeholder="Start Date" value={expForm.startDate} onChange={e => setExpForm(f => ({ ...f, startDate: e.target.value }))} />
-                        <Input placeholder="End Date" value={expForm.endDate} onChange={e => setExpForm(f => ({ ...f, endDate: e.target.value }))} disabled={expForm.current} />
+                        <Input type="date" placeholder="Start Date" value={expForm.startDate} onChange={e => setExpForm(f => ({ ...f, startDate: e.target.value }))} />
+                        <Input type="date" placeholder="End Date" value={expForm.endDate} onChange={e => setExpForm(f => ({ ...f, endDate: e.target.value }))} disabled={expForm.current} />
                         <label className="flex items-center gap-2"><input type="checkbox" checked={expForm.current} onChange={e => setExpForm(f => ({ ...f, current: e.target.checked }))} />Current</label>
                         <Textarea placeholder="Description" value={expForm.description} onChange={e => setExpForm(f => ({ ...f, description: e.target.value }))} />
                       </div>
@@ -536,8 +635,8 @@ export default function ProfilePage() {
                         <Input placeholder="Degree" value={eduForm.degree} onChange={e => setEduForm(f => ({ ...f, degree: e.target.value }))} />
                         <Input placeholder="Field of Study" value={eduForm.field} onChange={e => setEduForm(f => ({ ...f, field: e.target.value }))} />
                         <Input placeholder="Institution" value={eduForm.institution} onChange={e => setEduForm(f => ({ ...f, institution: e.target.value }))} />
-                        <Input placeholder="Start Date" value={eduForm.startDate} onChange={e => setEduForm(f => ({ ...f, startDate: e.target.value }))} />
-                        <Input placeholder="End Date" value={eduForm.endDate} onChange={e => setEduForm(f => ({ ...f, endDate: e.target.value }))} disabled={eduForm.current} />
+                        <Input type="date" placeholder="Start Date" value={eduForm.startDate} onChange={e => setEduForm(f => ({ ...f, startDate: e.target.value }))} />
+                        <Input type="date" placeholder="End Date" value={eduForm.endDate} onChange={e => setEduForm(f => ({ ...f, endDate: e.target.value }))} disabled={eduForm.current} />
                         <label className="flex items-center gap-2"><input type="checkbox" checked={eduForm.current} onChange={e => setEduForm(f => ({ ...f, current: e.target.checked }))} />Current</label>
                       </div>
                       <DialogFooter>

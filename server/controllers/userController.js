@@ -39,13 +39,94 @@ exports.updateProfile = async (req, res) => {
       })
     }
 
-    // Update profile fields
-    if (req.body.profile) {
-      user.profile = {
-        ...user.profile,
-        ...req.body.profile,
+    // If no profile payload or empty object, return current user without modifying
+    if (!req.body.profile || (typeof req.body.profile === 'object' && Object.keys(req.body.profile).length === 0)) {
+      return res.json({
+        success: true,
+        message: "No changes provided",
+        data: user,
+      })
+    }
+
+    // Normalize incoming fields (support mobileNumber alias and root-level fallbacks)
+    const incoming = { ...(req.body.profile || {}) }
+    // Accept fields accidentally sent at the root level
+    if (req.body.phone && !incoming.phone) incoming.phone = req.body.phone
+    if (req.body.mobileNumber && !incoming.phone) incoming.phone = req.body.mobileNumber
+    if (req.body.location && !incoming.location) incoming.location = req.body.location
+
+    // Whitelist allowed profile keys to avoid unexpected fields
+    const allowedKeys = new Set([
+      "title",
+      "summary",
+      "experience",
+      "education",
+      "skills",
+      "location",
+      "phone",
+      "website",
+      "linkedin",
+      "github",
+      "youtube",
+      "isFreelancer",
+      "freelanceCompany",
+      "profileVisibility",
+    ])
+
+    const filtered = {}
+    Object.keys(incoming).forEach((k) => {
+      if (allowedKeys.has(k)) {
+        filtered[k] = incoming[k]
+      }
+    })
+
+    // Coerce and sanitize experience/education date fields and remove empties
+    if (Array.isArray(filtered.experience)) {
+      filtered.experience = filtered.experience
+        .filter((e) => e && e.position && e.company)
+        .map((e) => ({
+          company: e.company,
+          position: e.position,
+          startDate: e.startDate ? new Date(e.startDate) : undefined,
+          endDate: e.current ? undefined : (e.endDate ? new Date(e.endDate) : undefined),
+          current: !!e.current,
+          description: e.description || undefined,
+        }))
+    }
+    if (Array.isArray(filtered.education)) {
+      filtered.education = filtered.education
+        .filter((e) => e && e.degree && e.institution)
+        .map((e) => ({
+          institution: e.institution,
+          degree: e.degree,
+          field: e.field || undefined,
+          startDate: e.startDate ? new Date(e.startDate) : undefined,
+          endDate: e.current ? undefined : (e.endDate ? new Date(e.endDate) : undefined),
+          current: !!e.current,
+        }))
+    }
+    if (filtered.location) {
+      filtered.location = {
+        city: filtered.location.city || undefined,
+        state: filtered.location.state || undefined,
+        country: filtered.location.country || undefined,
+      }
+      if (!filtered.location.city && !filtered.location.state && !filtered.location.country) {
+        delete filtered.location
       }
     }
+    if (incoming.mobileNumber && !incoming.phone) {
+      incoming.phone = incoming.mobileNumber
+      delete incoming.mobileNumber
+    }
+
+    // Update profile fields (handle undefined current profile safely)
+    user.profile = {
+      ...(user.profile || {}),
+      ...filtered,
+    }
+    // Ensure mongoose tracks nested changes
+    user.markModified('profile')
 
     await user.save()
 

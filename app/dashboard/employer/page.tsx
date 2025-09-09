@@ -22,7 +22,7 @@ interface Job {
   title: string
   company: any
   location: any
-  applicantsCount?: number
+  applicationsCount?: number
 }
 
 interface Company {
@@ -434,7 +434,7 @@ export default function EmployerDashboard() {
                         }
                       </div>
                     </div>
-                    <div className="text-blue-600 font-bold">{job.applicantsCount} Applicants</div>
+                    <div className="text-blue-600 font-bold">{job.applicationsCount || 0} Applicants</div>
                   </li>
                 ))}
               </ul>
@@ -556,7 +556,7 @@ export default function EmployerDashboard() {
                   <div key={job._id} className="border rounded-lg p-4">
                     <div className="flex justify-between items-center mb-3">
                       <h3 className="font-semibold text-lg">{job.title}</h3>
-                      <Badge variant="secondary">{job?.applicantsCount || 0} applicants</Badge>
+                      <Badge variant="secondary">{job?.applicationsCount || 0} applicants</Badge>
                     </div>
                     <div className="text-gray-600 mb-3">
                       {typeof job.company === 'string' ? job.company : job.company?.name} - {

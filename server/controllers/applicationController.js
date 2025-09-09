@@ -170,7 +170,16 @@ exports.getJobApplications = async (req, res) => {
 exports.updateApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params
-    const { status } = req.body
+    let { status } = req.body
+
+    // Normalize common aliases from UI
+    const aliasMap = {
+      accepted: "hired",
+      reviewed: "reviewing",
+      interviewing: "interview-scheduled",
+      interview: "interview-scheduled",
+    }
+    if (status && aliasMap[status]) status = aliasMap[status]
 
     const application = await Application.findById(id)
     if (!application) {
@@ -193,6 +202,14 @@ exports.updateApplicationStatus = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: "Access denied",
+      })
+    }
+
+    const allowed = ["pending", "reviewing", "shortlisted", "interview-scheduled", "rejected", "hired"]
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Allowed: ${allowed.join(", ")}`,
       })
     }
 

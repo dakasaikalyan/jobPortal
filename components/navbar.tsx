@@ -90,8 +90,9 @@ export function Navbar() {
             {user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
+                  <Button variant="ghost" className="rounded-full gap-2">
                     <User className="w-5 h-5" />
+                    <span className="hidden lg:inline">{user.firstName}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

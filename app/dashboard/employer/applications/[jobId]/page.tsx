@@ -24,7 +24,7 @@ interface Application {
     title: string
     company: { name: string }
   }
-  status: "pending" | "reviewed" | "accepted" | "rejected"
+  status: "pending" | "reviewing" | "shortlisted" | "interview-scheduled" | "hired" | "rejected"
   appliedAt: string
   coverLetter?: string
 }
@@ -119,9 +119,9 @@ export default function JobApplicationsPage() {
     switch (status) {
       case "pending":
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending</Badge>
-      case "reviewed":
+      case "reviewing":
         return <Badge variant="secondary" className="bg-blue-100 text-blue-800">Reviewed</Badge>
-      case "accepted":
+      case "hired":
         return <Badge variant="secondary" className="bg-green-100 text-green-800">Accepted</Badge>
       case "rejected":
         return <Badge variant="secondary" className="bg-red-100 text-red-800">Rejected</Badge>
@@ -211,7 +211,7 @@ export default function JobApplicationsPage() {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            onClick={() => handleStatusUpdate(application._id, "accepted")}
+                            onClick={() => handleStatusUpdate(application._id, "hired")}
                             disabled={actionLoading === application._id}
                             className="bg-green-600 hover:bg-green-700"
                           >
@@ -228,7 +228,7 @@ export default function JobApplicationsPage() {
                         </div>
                       )}
                       
-                      {application.status === "accepted" && (
+                      {application.status === "hired" && (
                         <div className="flex items-center gap-2 text-green-600">
                           <CheckCircle className="w-4 h-4" />
                           <span className="text-sm font-medium">Accepted</span>

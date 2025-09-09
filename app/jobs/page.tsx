@@ -78,12 +78,12 @@ export default function JobsPage() {
   const checkAppliedJobs = async () => {
     if (!token) return
     try {
-      const res = await fetch("/api/applications/my", {
+      const res = await fetch("/api/applications/my-applications", {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
       if (res.ok) {
-        const appliedJobIds = new Set(data.data.map((app: any) => app.job._id))
+        const appliedJobIds = new Set((data.data || []).map((app: any) => app.job._id))
         setAppliedJobs(appliedJobIds)
       }
     } catch (error) {
@@ -192,7 +192,7 @@ export default function JobsPage() {
           <p className="text-gray-600">
             Showing {jobs.length} jobs
           </p>
-          <Button variant="outline" className="gap-2 bg-transparent">
+          <Button variant="outline" className="gap-2 bg-transparent" onClick={() => alert("More filters coming soon")}> 
             <Filter className="w-4 h-4" />
             More Filters
           </Button>
